@@ -1,0 +1,185 @@
+import pygame
+import cv2
+import random
+import numpy as np
+from cvzone.HandTrackingModule import HandDetector
+pygame.init()
+import time
+
+# create window/display
+width, height = 1280, 720
+window = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Balloon Game")
+
+def resetBalloon():
+    rectBallon.x = random.randint(50, width - 50)
+    rectBallon.y = -50
+
+
+def resetMeteor():
+    rectMeteor.y = random.randint(50, height - 50)
+    rectMeteor.x = -50
+
+
+# clock fps
+fps = 30
+clock = pygame.time.Clock()
+
+# var
+diamond = 10
+speed = 10
+score = 100
+timeStart = time.time()
+totalTime = 30
+purple, brown, black = (136, 101, 255), (109,77,77), (0, 0, 0)
+
+# webcam
+cap = cv2.VideoCapture(0)
+cap.set(3, 1280)
+cap.set(4, 720)
+
+detector = HandDetector(detectionCon=0.8, maxHands=1)
+
+# background
+imgBackground = pygame.image.load("../resources/background5.png").convert()
+imgEndBackground = pygame.image.load("../resources/endBackground.jpg").convert()
+
+# Diamond
+imgDiamond = pygame.image.load("../resources/diamond.png").convert_alpha()
+imgDiamond = pygame.transform.scale(imgDiamond, (80, 80))
+
+# meteorite
+imgBallon = pygame.image.load("../resources/meteor.png").convert_alpha()
+imgBallon = pygame.transform.scale(imgBallon, (120, 160))
+rectBallon = imgBallon.get_rect()
+
+imgMeteor = pygame.image.load("../resources/meteor.png").convert_alpha()
+imgMeteor = pygame.transform.scale(imgMeteor, (120, 160))
+rectMeteor = imgMeteor.get_rect()
+
+# Plane
+imgPlane = pygame.image.load("../resources/plane.png").convert_alpha()
+imgPlane = pygame.transform.scale(imgPlane, (200, 200))
+rectPlane = imgPlane.get_rect()
+rectPlane.center = (200, height//2)
+
+
+font = pygame.font.Font("../resources/PressStart2P-Regular.ttf", 50)
+font2 = pygame.font.Font("../resources/PressStart2P-Regular.ttf", 30)
+
+state = "menu"
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+        # Bấm start
+        if state == "menu" and event.type == pygame.MOUSEBUTTONDOWN:
+            mx, my = event.pos
+            if 500 < mx < 700 and 350 < my < 420:
+                state = "play"
+                timeStart = time.time()   # reset time
+                resetBalloon()
+
+    window.fill((0, 0, 0))
+
+    # ----- MENU -----
+    if state == "menu":
+        window.blit(imgBackground, (0, 0))
+        title = font.render("Plane Game", True, brown)
+        window.blit(title, (370, 150))
+
+        window.blit(imgDiamond, (1070, 0))
+        diamondText = font2.render(f"{diamond}", True, (0, 0, 0))
+        window.blit(diamondText, (1150, 20))
+
+
+        pygame.draw.rect(window, (0, 200, 0), (500, 350, 200, 70), border_radius=20)
+        startText = font2.render("START", True, (0, 0, 0))
+        window.blit(startText, (530, 370))
+
+    # ----- GAME -----
+    elif state == "play":
+
+        timeRemain = int(totalTime - (time.time() - timeStart))
+        if timeRemain < 0:
+            state = "end"
+
+        else:
+            success, img = cap.read()
+            img = cv2.flip(img, 1)
+            hands, img = detector.findHands(img, flipType=False)
+            imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            imgRGB = np.rot90(imgRGB)
+            frame = pygame.surfarray.make_surface(imgRGB).convert()
+            frame = pygame.transform.flip(frame, True, False)
+            window.blit(frame, (0, 0))
+            window.blit(imgBallon, rectBallon)
+            window.blit(imgMeteor, rectMeteor)
+            window.blit(imgPlane, rectPlane)
+
+            textScore = font.render(f"Score: {score}", True, (255, 255, 255))
+            textTime = font.render(f"Time: {timeRemain}", True, (255, 255, 255))
+            window.blit(textScore, (35, 35))
+            window.blit(textTime, (500, 35))
+
+            if rectBallon.y > height:
+                resetBalloon()
+                if speed >= 70:
+                    speed = 70
+                else:
+                    speed += 2
+
+
+            if rectMeteor.x > width:
+                resetMeteor()
+                if speed >= 70:
+                    speed = 70
+                else:
+                    speed += 2
+
+            if hands:
+                x, y = hands[0]['lmList'][8]  # Ngón tay
+                rectPlane.center = (x , y)  # Máy bay di chuyển theo tay theo trục x, y
+                if rectBallon.collidepoint(rectPlane.center[0], rectPlane.center[1]):
+                    resetBalloon()
+                    speed += 1
+                    score -= 5
+
+            rectBallon.y += speed
+            rectMeteor.x += speed
+
+
+    # ============= END SCREEN =============
+    elif state == "end":
+        window.blit(imgEndBackground, (0, 0))
+
+        gameOverText = font.render("TIME UP!", True, black)
+        scoreText = font.render(f"Score: {score}", True, black)
+
+        window.blit(gameOverText, (450, 200))
+        window.blit(scoreText, (450, 300))
+
+        # Diamond
+        if score > 60:
+            diamond += 5
+
+        # Nút Play Again
+        pygame.draw.rect(window, (0, 200, 0), (450, 450, 350, 90), border_radius=20)
+        endText = font2.render("PLAY AGAIN", True, (0, 0, 0))
+        window.blit(endText, (470, 485))
+
+        # xử lý click nút (không được gọi event.get lần 2)
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            mx, my = event.pos
+            if 450 < mx < 800 and 450 < my < 540:
+                score = 0
+                speed = 5
+                timeStart = time.time()
+                resetBalloon()
+                state = "menu"
+
+    pygame.display.update()
+    clock.tick(fps)
