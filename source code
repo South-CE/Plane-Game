@@ -31,7 +31,13 @@ speed = 10
 score = 100
 timeStart = time.time()
 totalTime = 30
-purple, brown, black = (136, 101, 255), (109,77,77), (0, 0, 0)
+purple, brown, black, forest, white = (136, 101, 255), (109,77,77), (0, 0, 0), (34, 100, 34), (255, 230, 255)
+skins = [
+    "../resources/plane.png",
+    "../resources/plane2.png",
+    "../resources/plane3.png"
+]
+current_skin = 0
 
 # webcam
 cap = cv2.VideoCapture(0)
@@ -44,6 +50,11 @@ detector = HandDetector(detectionCon=0.8, maxHands=1)
 imgBackground = pygame.image.load("../resources/background5.png").convert()
 imgEndBackground = pygame.image.load("../resources/endBackground.jpg").convert()
 
+# frame
+imgFrame =  pygame.image.load("../resources/frame.png").convert_alpha()
+imgFrame = pygame.transform.scale(imgFrame, (440, 360))
+imgFrame2 =  pygame.image.load("../resources/frame.png").convert_alpha()
+imgFrame2 = pygame.transform.scale(imgFrame2, (580, 150))
 # Diamond
 imgDiamond = pygame.image.load("../resources/diamond.png").convert_alpha()
 imgDiamond = pygame.transform.scale(imgDiamond, (80, 80))
@@ -58,11 +69,11 @@ imgMeteor = pygame.transform.scale(imgMeteor, (120, 160))
 rectMeteor = imgMeteor.get_rect()
 
 # Plane
-imgPlane = pygame.image.load("../resources/plane.png").convert_alpha()
+imgPlane = pygame.image.load(skins[current_skin]).convert_alpha()
 imgPlane = pygame.transform.scale(imgPlane, (200, 200))
-rectPlane = imgPlane.get_rect()
-rectPlane.center = (200, height//2)
 
+# galaxy
+galaxy = pygame.image.load("../resources/galaxy.jpg").convert()
 
 font = pygame.font.Font("../resources/PressStart2P-Regular.ttf", 50)
 font2 = pygame.font.Font("../resources/PressStart2P-Regular.ttf", 30)
@@ -78,28 +89,77 @@ while running:
         # Bấm start
         if state == "menu" and event.type == pygame.MOUSEBUTTONDOWN:
             mx, my = event.pos
-            if 500 < mx < 700 and 350 < my < 420:
+            if 530 < mx < 730 and 350 < my < 420:
                 state = "play"
                 timeStart = time.time()   # reset time
                 resetBalloon()
+            elif 530 < mx < 730 and 450 < my < 520:
+                state = "skin"
 
     window.fill((0, 0, 0))
 
     # ----- MENU -----
     if state == "menu":
+        imgPlane = pygame.transform.scale(imgPlane, (200, 200))
+        rectPlane = imgPlane.get_rect()
+        rectPlane.center = (200, height // 2)
+
         window.blit(imgBackground, (0, 0))
-        title = font.render("Plane Game", True, brown)
-        window.blit(title, (370, 150))
+        window.blit(imgFrame2, (340, 50))
+        title = font.render("Plane Game", True, white)
+        window.blit(title, (380, 100))
+
+        window.blit(imgFrame, (410, 300))
 
         window.blit(imgDiamond, (1070, 0))
         diamondText = font2.render(f"{diamond}", True, (0, 0, 0))
         window.blit(diamondText, (1150, 20))
 
 
-        pygame.draw.rect(window, (0, 200, 0), (500, 350, 200, 70), border_radius=20)
-        startText = font2.render("START", True, (0, 0, 0))
-        window.blit(startText, (530, 370))
+        pygame.draw.rect(window, forest, (530, 350, 200, 70), border_radius=20)
+        startText = font2.render("START", True, (255, 230, 255))
+        window.blit(startText, (560, 370))
 
+        # skin
+        pygame.draw.rect(window, forest, (530, 450, 200, 70), border_radius=20)
+        skinText = font2.render("SKIN", True, (255, 230, 255))
+        window.blit(skinText, (570, 470))
+
+        # about
+        pygame.draw.rect(window, forest, (530, 550, 200, 70), border_radius=20)
+        aboutText = font2.render("ABOUT", True, (255, 230, 255))
+        window.blit(aboutText, (560, 570))
+
+    # ----- SKIN -----
+    elif state == "skin":
+        window.blit(imgBackground, (0, 0))
+
+        pygame.draw.rect(window, (255, 255, 255), (50, 200, 300, 300), border_radius=20)
+        imgPlane = pygame.image.load(skins[current_skin]).convert_alpha()
+        imgPlane = pygame.transform.scale(imgPlane, (300, 300))
+        window.blit(imgPlane, (50, 200)) # skin1
+
+        pygame.draw.rect(window, (255, 255, 255), (450, 200, 300, 300), border_radius=20)
+        imgPlane = pygame.image.load(skins[current_skin+1]).convert_alpha()
+        imgPlane = pygame.transform.scale(imgPlane, (250, 250))
+        window.blit(imgPlane, (480, 220)) # skin2
+
+        pygame.draw.rect(window, (255, 255, 255), (860, 200, 300, 300), border_radius=20)
+        imgPlane = pygame.image.load(skins[current_skin + 2]).convert_alpha()
+        imgPlane = pygame.transform.scale(imgPlane, (300, 300))
+        window.blit(imgPlane, (860, 200)) # skin3
+
+        if state == "skin" and event.type == pygame.MOUSEBUTTONDOWN:
+            mx, my = event.pos
+            if 50 < mx < 350 and 200 < my < 500:
+                imgPlane = pygame.image.load(skins[0]).convert_alpha()
+                state = "menu"
+            elif 450 < mx < 750 and 200 < my < 450:
+                imgPlane = pygame.image.load(skins[1]).convert_alpha()
+                state = "menu"
+            elif 860 < mx < 1160 and 200 < my < 500:
+                imgPlane = pygame.image.load(skins[2]).convert_alpha()
+                state = "menu"
     # ----- GAME -----
     elif state == "play":
 
@@ -115,7 +175,8 @@ while running:
             imgRGB = np.rot90(imgRGB)
             frame = pygame.surfarray.make_surface(imgRGB).convert()
             frame = pygame.transform.flip(frame, True, False)
-            window.blit(frame, (0, 0))
+            window.blit(galaxy, (0, 0))
+
             window.blit(imgBallon, rectBallon)
             window.blit(imgMeteor, rectMeteor)
             window.blit(imgPlane, rectPlane)
@@ -123,27 +184,27 @@ while running:
             textScore = font.render(f"Score: {score}", True, (255, 255, 255))
             textTime = font.render(f"Time: {timeRemain}", True, (255, 255, 255))
             window.blit(textScore, (35, 35))
-            window.blit(textTime, (500, 35))
+            window.blit(textTime, (700, 35))
 
             if rectBallon.y > height:
                 resetBalloon()
-                if speed >= 70:
-                    speed = 70
+                if speed >= 30:
+                    speed = 30
                 else:
                     speed += 2
 
 
             if rectMeteor.x > width:
                 resetMeteor()
-                if speed >= 70:
-                    speed = 70
+                if speed >= 30:
+                    speed = 30
                 else:
                     speed += 2
 
             if hands:
                 x, y = hands[0]['lmList'][8]  # Ngón tay
                 rectPlane.center = (x , y)  # Máy bay di chuyển theo tay theo trục x, y
-                if rectBallon.collidepoint(rectPlane.center[0], rectPlane.center[1]):
+                if rectBallon.colliderect(rectPlane):
                     resetBalloon()
                     speed += 1
                     score -= 5
@@ -156,20 +217,25 @@ while running:
     elif state == "end":
         window.blit(imgEndBackground, (0, 0))
 
-        gameOverText = font.render("TIME UP!", True, black)
-        scoreText = font.render(f"Score: {score}", True, black)
+        # Frame
+        imgFrame3 = pygame.image.load("../resources/frame.png").convert_alpha()
+        imgFrame3 = pygame.transform.scale(imgFrame3, (500, 300))
+        window.blit(imgFrame3, (400, 80))
 
-        window.blit(gameOverText, (450, 200))
-        window.blit(scoreText, (450, 300))
+        gameOverText = font.render("TIME UP!", True, white)
+        scoreText = font.render(f"Score:{score}", True, white)
+
+        window.blit(gameOverText, (460, 150))
+        window.blit(scoreText, (430, 250))
 
         # Diamond
         if score > 60:
             diamond += 5
 
         # Nút Play Again
-        pygame.draw.rect(window, (0, 200, 0), (450, 450, 350, 90), border_radius=20)
-        endText = font2.render("PLAY AGAIN", True, (0, 0, 0))
-        window.blit(endText, (470, 485))
+        pygame.draw.rect(window, forest, (450, 450, 350, 90), border_radius=20)
+        endText = font2.render("PLAY AGAIN", True, (255, 255, 255))
+        window.blit(endText, (480, 480))
 
         # xử lý click nút (không được gọi event.get lần 2)
         if event.type == pygame.MOUSEBUTTONDOWN:
